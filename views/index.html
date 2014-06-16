@@ -1,0 +1,233 @@
+﻿<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Super stronka</title>
+
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+
+    <script src="javascripts/jquery-1.11.1.min.js"></script>
+    <script src="javascripts/socket.io.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+			io = io.connect();
+			io.on('new image', function() {
+				$('#newImageNotify').remove();
+				var notificationDiv = $('#newPhotoNotification');				
+				var currentNotifications = notificationDiv.data('notificationNum') || 0;
+				notificationDiv.data('notificationNum', ++currentNotifications);
+				notificationDiv.prepend('<button id="newImageNotify" style="padding-left:3px;padding-right:3px;width:auto;height:20px;background-color:red;color:white;">' + currentNotifications + '</button>');
+			});
+			io.on('favourites changed', function() {
+				$('#rankNotify').remove();
+				var notificationDiv = $('#rankingNotification');
+				var currentNotifications = notificationDiv.data('notificationNum') || 0;
+				notificationDiv.data('notificationNum', ++currentNotifications);
+				notificationDiv.prepend('<button id="rankNotify" style="padding-left:3px;padding-right:3px;width:auto;height:20px;background-color:red;color:white;">' + currentNotifications + '</button>');
+			});
+			$('#uploadImageForm input[type=file]').on('change', function (e)
+			{
+				$('#uploadImageForm').data('images', e.target.files);
+			});
+			showMyPhotos(false, false);
+			showRanking();
+		
+			$('#main').on('click', '#rankNotify', function() {
+				showRanking();
+				$('#rankNotify').remove();
+				$('#rankingNotification').data('notificationNum', 0);
+			});
+			
+			$('#main').on('click', '#newImageNotify', function() {
+				showMyPhotos(false, false);
+				$('#newImageNotify').remove();
+				$('#newPhotoNotification').data('notificationNum', 0);
+			});
+			
+			$('#photoUploadDo').on('click', doPhotoUpload);
+		});
+		
+        function showRanking() {
+            $.ajax({url: '/getRanking', type: 'POST'}).done(function (data) {
+				var photos = data.photos;
+				var photosNum = photos.length;
+				if (photosNum > 0) {
+					var divName = 'rankingTable';
+					var photosTableDiv = $('#' + divName);
+					photosTableDiv.empty();
+					var rowNum = Math.ceil(photosNum / 3);
+					var tableHtml = '<table>';
+					for (var i = 0; i < rowNum; i++) {
+						tableHtml += '<tr><td></td><td></td><td></td></tr>';
+					}
+					
+					tableHtml += '</table>';
+					photosTableDiv.append(tableHtml);
+					downloadPhoto(photos, 0, photosNum, false, divName);
+				}
+			});
+        }
+		
+        function showMyPhotos(showFavourites, showMine) {
+            var photos = new Array();
+			var photoId;
+            $.ajax({url: '/photos', type: 'POST', data: {showFavourites: showFavourites, showMine: showMine}}).done(function (data) {
+				photos = data.photos;
+				var photosNum = photos.length;
+				if (photosNum > 0) {
+					var divName = 'photosTable';
+					var photosTableDiv = $('#' + divName);
+					photosTableDiv.empty();
+					var rowNum = Math.ceil(photosNum / 3);
+					var tableHtml = '<table>';
+					for (var i = 0; i < rowNum; i++) {
+						tableHtml += '<tr><td></td><td></td><td></td></tr>';
+					}
+					
+					tableHtml += '</table>';
+					photosTableDiv.append(tableHtml);
+					downloadPhoto(photos, 0, photosNum, showFavourites, divName);
+				}
+				else {
+					alert('Nie znaleziono zdjęć');
+				}
+			});
+        }
+		
+		function downloadPhoto(photosFromDb, index, photosLength, showFavourites, divName) {
+		
+			$.ajax({url: '/photos', type: 'POST', data: { photoId: photosFromDb[index]._id }}).done(function (data) {
+				var cells = $('#'+ divName + ' td');
+				var toReplace = 'binaryData';
+				var imageTemplate = '<a href="/image/'+ photosFromDb[index]._id +'"><img height="100" src="data:image/jpeg;base64,' + toReplace + '" /></a>';
+				var imageContainer = imageTemplate.replace(toReplace, data);
+				$(cells[index]).append(imageContainer);
+				if (index < photosLength - 1) {
+					downloadPhoto(photosFromDb, index + 1, photosLength, showFavourites, divName);
+				}
+				else {
+					return;
+				}
+			});
+		}
+
+        function showMyFavourites() {
+			showMyPhotos(true);
+		}
+		
+		
+        function addPhoto() {
+			$('#uploadImageForm').show();
+		}
+		
+		function doPhotoUpload() {			
+			var imagesData = new FormData();
+			var selectedImages = $('#uploadImageForm').data('images');
+			if (!selectedImages || selectedImages.length == 0) {
+				alert('Wybierz plik');
+				return;
+			}
+			
+			$.each(selectedImages, function(key, value)
+			{
+				imagesData.append(key, value);
+			});
+			$.ajax({
+				url: '/upload',
+				type: 'POST',
+				data: imagesData,
+				dataType: 'json',
+				cache: false,
+				contentType: false,
+				processData: false
+				})
+				.done(function (data) {
+					$('#uploadImageForm').hide();
+					showMyPhotos(false, false);
+					io.emit('add image')
+			});
+		}
+    </script>
+
+</head>
+
+<body>
+    <div id="main">
+        <header>
+            <div id="logo">
+                <div id="logo_text">
+
+                    <h1><a href="/">Super<span class="logo_colour">stronka</span></a></h1>
+                    <h2>dodajesz fotki i w ogóle</h2>
+                </div>
+            </div>
+
+
+            <nav>
+                <div id="menu_container">
+
+                    <ul class="sf-menu" id="nav">
+
+                        <li class="selected"><a href="/?userName=<%= userName %>">Strona główna</a>
+                        </li>
+                        <li><a href="/logout">Wyloguj się</a>
+                        </li>
+
+                    </ul>
+                </div>
+            </nav>
+        </header>
+
+        <div id="site_content">
+
+            <div id="sidebar_container">
+                <div class="sidebar">
+
+                    <center>
+						<%= userName %>
+						<br />
+						<br />
+                        <button onclick='showMyPhotos(false, true)'>Moje zdjęcia</button>
+                        <br />
+                        <button onclick='showMyFavourites()'>Ulubione</button>
+                        <br />
+                        <button onclick='addPhoto()'>Dodaj zdjęcie</button>
+                        <br />
+						<form style="display:none;" id="uploadImageForm" method="post" enctype="multipart/form-data">
+							<label for="photo">Filename:</label>
+							<input type="file" name="photo" id="photo"><br>
+							<input type="text" style="visibility:hidden;" name="userName">
+							<input id="photoUploadDo" type="button" value="Upload">
+						</form>
+                    </center>
+
+                </div>
+
+            </div>
+            <div id="content">
+				<div id="rankingNotification"> Ranking</div>
+
+				<div id="rankingTable">
+				</div>
+				<div id="newPhotoNotification"> Wszystkie zdjęcia</div>
+				<div id="photosTable">
+				</div>
+
+            </div>
+        </div>
+        <div id="scroll">
+            <a title="idź do góry" class="top" href="#">
+                <img src="images/top.png" alt="top">
+            </a>
+        </div>
+        <footer>
+            <p>
+                Sylwia Słowikowska | 2014
+            </p>
+        </footer>
+    </div>
+
+</body>
+
+</html>

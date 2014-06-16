@@ -1,0 +1,159 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Super stronka</title>
+
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+
+    <script src="javascripts/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+			
+			$('#uploadImageForm input[type=file]').on('change', function (e)
+			{
+				$('#uploadImageForm').data('images', e.target.files);
+			});
+			}
+        );
+
+        function showMyPhotos() {
+            var photos = new Array();
+            $.ajax({url: '/photos', type: 'POST'}).done(function (data) {
+				data = JSON.parse(data);
+				photos = data.photos;
+				var photosNum = photos.length;
+				var cells = $('#leftPanel td');
+				var toReplace = 'binaryData';
+				var imageTemplate = '<img src="data:image/jpeg;base64' + toReplace + '" />';
+				for (var i = 0; i < photosNum; i++) {
+					var binaryData = photos[i];
+					var imageContainer = imageTemplate.replace(toReplace, binaryData);
+					$(cells[i]).append(imageContainer);
+				}
+			});
+        }
+
+        function showMyFavourites() {}
+		
+		
+        function addPhoto() {
+			var imagesData = new FormData();
+			var selectedImages = $('#uploadImageForm').data('images');
+			$.each(selectedImages, function(key, value)
+			{
+				imagesData.append(key, value);
+			});
+			$.ajax({
+				url: '/upload',
+				type: 'POST',
+				data: imagesData,
+				dataType: 'json',
+				cache: false,
+				contentType: false,
+				processData: false
+				}).done(function (data) {
+				console.log(data);
+			});
+		}
+    </script>
+
+</head>
+
+<body>
+    <div id="main">
+        <header>
+            <div id="logo">
+                <div id="logo_text">
+
+                    <h1><a href="/">Super<span class="logo_colour">stronka</span></a></h1>
+                    <h2>dodajesz fotki i w og󬥮</h2>
+                </div>
+            </div>
+
+
+            <nav>
+                <div id="menu_container">
+
+                    <ul class="sf-menu" id="nav">
+
+                        <li class="selected"><a href="/">Strona gԳwna</a>
+                        </li>
+                        <li><a href="#">Wyloguj si꼯a>
+                        </li>
+
+                    </ul>
+                </div>
+            </nav>
+        </header>
+
+        <div id="site_content">
+
+            <div id="sidebar_container">
+                <div class="sidebar">
+
+                    <center>
+                        <button onclick='showMyPhotos()'>Moje zdj뤩a</button>
+                        <br />
+                        <button onclick='showMyFavourites()'>Ulubione</button>
+                        <br />
+                        <button onclick='addPhoto()'>Dodaj zdj뤩e</button>
+                        <br />
+						<form id="uploadImageForm" method="post" enctype="multipart/form-data">
+							<label for="photo">Filename:</label>
+							<input type="file" name="photo" id="photo"><br>
+							<input type="submit" value="Upload">
+						</form>
+                    </center>
+
+                </div>
+
+            </div>
+            <div id="content">
+                <h1>Ranking</h1>
+
+                <p>Ble ble ble ble</p>
+
+
+                <h2>Wszystkie zdj뤩a</h2>
+
+                <table>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </table>
+
+                <p>
+                    Bleb ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble ble
+                </p>
+
+            </div>
+        </div>
+        <div id="scroll">
+            <a title="w g󲪢 class="top" href="#">
+                <img src="images/top.png" alt="top">
+            </a>
+        </div>
+        <footer>
+            <p>
+                Sylwia Sԯwikowska | 2014
+            </p>
+        </footer>
+    </div>
+
+</body>
+
+</html>
